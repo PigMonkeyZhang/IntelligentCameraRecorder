@@ -85,7 +85,7 @@ namespace IntelligentCameraRecorder
                 //System.Diagnostics.Debug.WriteLine(s);
                 this.comboBox1.Items.Add(s);
             }
-
+            comboBox1.SelectedIndex = 1;
         }
 
         private void button1_Click(object sender, EventArgs e)
