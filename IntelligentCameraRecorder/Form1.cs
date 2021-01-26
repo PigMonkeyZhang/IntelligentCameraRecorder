@@ -16,8 +16,17 @@ namespace IntelligentCameraRecorder
     public partial class Form1 : Form
     {
         private Socket ClientSocket;
-        private System.IO.Ports.SerialPort serialPort1;
+        private SerialPort ComDevice;
         private Boolean isConnected = false;
+        private Boolean isComConnected = false;
+        private int showLinesSocket = 0;
+        private int showLinesCom = 0;
+        private int port;
+        private string socketip;
+        private CSVFileHelper csvHelper=null;
+        private string outputPath = Environment.CurrentDirectory;
+
+
         public void Connect(string IP, Int32 Port)
         {
             if (isConnected)
@@ -62,8 +71,13 @@ namespace IntelligentCameraRecorder
                 //线程委托去刷新信息
                 Action<String> AsyncUIDelegate = delegate (string n)
                 {
+                    if (showLinesSocket++ > 50)
+                    {
+                        showLinesSocket = 0;
+                        textBox2.Clear();
+                    }
                     textBox2.AppendText(n);
-                    textBox2.AppendText(System.Environment.NewLine);
+                   // textBox2.AppendText(System.Environment.NewLine);
                 };
                 textBox2.Invoke(AsyncUIDelegate, new object[] { Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght) });
                 //////////////////////////////
@@ -74,6 +88,8 @@ namespace IntelligentCameraRecorder
                 Console.WriteLine("服务器已断开");
             }
         }
+
+     
         public Form1()
         {
             InitializeComponent();
@@ -85,7 +101,48 @@ namespace IntelligentCameraRecorder
                 //System.Diagnostics.Debug.WriteLine(s);
                 this.comboBox1.Items.Add(s);
             }
-            comboBox1.SelectedIndex = 1;
+            comboBox1.SelectedItem = Utility.GetValue("com", "portname", "COM3");
+            //comboBox1.SelectedIndex = 1;
+            ComDevice = new SerialPort();
+            ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//绑定事件
+
+            //init current output path as current path
+            textBox1.Text = Environment.CurrentDirectory;
+
+        }
+
+        /// <summary>
+        /// 接收数据
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Com_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            if (ComDevice.IsOpen)
+            {
+                byte[] ReDatas = new byte[ComDevice.BytesToRead];
+                ComDevice.Read(ReDatas, 0, ReDatas.Length);//读取数据
+                this.ProcessData(ReDatas);//输出数据,这里处理数据
+            }
+            else
+            {
+                MessageBox.Show("请先打开串口");
+            }
+
+        }
+        private void ProcessData(byte[] data)
+        {
+            //在这里处理数据吧
+            this.BeginInvoke(new MethodInvoker(delegate
+            {
+                // textBox3.AppendText("\r\n");
+                if (showLinesCom++ > 50)
+                {
+                    showLinesCom = 0;
+                    textBox3.Clear();
+                }
+                textBox3.AppendText(new UTF8Encoding().GetString(data));
+            }));
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -96,6 +153,15 @@ namespace IntelligentCameraRecorder
             if (folderBrowser.ShowDialog() == DialogResult.OK)
             {
                 this.textBox1.Text = folderBrowser.SelectedPath;
+                outputPath = folderBrowser.SelectedPath;
+                if(null == csvHelper)
+                    csvHelper = new CSVFileHelper(folderBrowser.SelectedPath);
+                else
+                {
+                    csvHelper.filePath = outputPath;
+                    csvHelper.flushCSV();
+                }
+                    
             }
         }
 
@@ -106,8 +172,63 @@ namespace IntelligentCameraRecorder
 
         private void button2_Click(object sender, EventArgs e)
         {
-            // this.label1.Text = "wangbadan";
-            Connect("127.0.0.1", 1231);
+            if (csvHelper == null)
+                csvHelper = new CSVFileHelper(Environment.CurrentDirectory);
+            else
+                csvHelper.flushCSV();
+            // this.label1.Text = "wugui";
+            socketip = Utility.GetValue("socket", "ip", "127.0.0.1");
+            port = int.Parse(Utility.GetValue("socket", "port", "1231"));
+            // connect socket here
+            Connect(socketip, port);
+            // connect serial port here
+            openSerialPort();
+        }
+        private void openSerialPort()
+        {
+            if (comboBox1.Items.Count <= 0)
+            {
+                MessageBox.Show("没有发现串口,请检查线路！");
+                return;
+            }
+            if (isComConnected)   return;
+            if (ComDevice.IsOpen == false)
+            {
+                ComDevice.PortName = comboBox1.SelectedItem.ToString();
+                ComDevice.BaudRate = int.Parse(Utility.GetValue("com","baudrate","9600"));
+                ComDevice.Parity = (Parity)0;
+                ComDevice.DataBits = 8;
+                ComDevice.StopBits = (StopBits)1;
+                try
+                {
+                    ComDevice.Open();
+                    isComConnected = true;
+                   
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+            }            
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            textBox2.Clear();
+            textBox3.Clear();
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Utility.SetValue("com", "portname", comboBox1.SelectedItem.ToString());
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (null != csvHelper)
+                csvHelper.close();
         }
     }
 }
