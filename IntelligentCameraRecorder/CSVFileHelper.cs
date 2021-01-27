@@ -159,6 +159,7 @@ namespace IntelligentCameraRecorder
         public void updateCCDValue(string values)
         {
             int i;
+            bool isMatched = false;
             //0. 先判断ccd列表是否已经初始化了
             if (null == ccdList) 
             {
@@ -174,9 +175,13 @@ namespace IntelligentCameraRecorder
             for(i = 0; i< ccdList.Length; i++)
             {
                 if (values.Contains(ccdList[i].ccd_name))
+                {
+                    isMatched = true;
                     break;
+                }
+                    
             }
-            if (i == ccdList.Length)
+            if (isMatched==false)
             {
                 MessageBox.Show("数据错误，未找到摄像头信息");
                 return;            
@@ -192,7 +197,7 @@ namespace IntelligentCameraRecorder
             {
                 //更新一行数据
                 updateALine();
-                MessageBox.Show("更新一行的机会来啦");
+               // MessageBox.Show("更新一行的机会来啦");
             }
 
             //最后无论如何都要更新这个ccd数据的对吧。
