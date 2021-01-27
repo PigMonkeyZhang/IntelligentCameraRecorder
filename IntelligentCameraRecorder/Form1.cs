@@ -65,8 +65,10 @@ namespace IntelligentCameraRecorder
             {
                 byte[] ByteReceive = new byte[1024];
                 int ReceiveLenght = ClientSocket.Receive(ByteReceive);//此处线程会被挂起
-                Console.WriteLine("{0}", Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght));
-                System.Diagnostics.Debug.WriteLine("信息:{0}", Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght));
+                string strGet = Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght);
+                Console.WriteLine("{0}", strGet);
+                System.Diagnostics.Debug.WriteLine("信息:{0}", strGet);
+                csvHelper.updateCCDValue(strGet);
                 //////////////////////////////
                 //线程委托去刷新信息
                 Action<String> AsyncUIDelegate = delegate (string n)
@@ -77,9 +79,9 @@ namespace IntelligentCameraRecorder
                         textBox2.Clear();
                     }
                     textBox2.AppendText(n);
-                   // textBox2.AppendText(System.Environment.NewLine);
+                    textBox2.AppendText(System.Environment.NewLine);
                 };
-                textBox2.Invoke(AsyncUIDelegate, new object[] { Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght) });
+                textBox2.Invoke(AsyncUIDelegate, new object[] { strGet });
                 //////////////////////////////
                 Receive();
             }
@@ -122,6 +124,7 @@ namespace IntelligentCameraRecorder
             {
                 byte[] ReDatas = new byte[ComDevice.BytesToRead];
                 ComDevice.Read(ReDatas, 0, ReDatas.Length);//读取数据
+               
                 this.ProcessData(ReDatas);//输出数据,这里处理数据
             }
             else
@@ -133,6 +136,8 @@ namespace IntelligentCameraRecorder
         private void ProcessData(byte[] data)
         {
             //在这里处理数据吧
+            string strGet = new UTF8Encoding().GetString(data);
+            csvHelper.updateCCDValue(strGet);
             this.BeginInvoke(new MethodInvoker(delegate
             {
                 // textBox3.AppendText("\r\n");
@@ -141,7 +146,7 @@ namespace IntelligentCameraRecorder
                     showLinesCom = 0;
                     textBox3.Clear();
                 }
-                textBox3.AppendText(new UTF8Encoding().GetString(data));
+                textBox3.AppendText(strGet);
             }));
         }
 
