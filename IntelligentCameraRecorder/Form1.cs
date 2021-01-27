@@ -302,5 +302,10 @@ namespace IntelligentCameraRecorder
             if (null != csvHelper)
                 csvHelper.updateParameterFileName(comboBox2.SelectedItem.ToString());
         }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

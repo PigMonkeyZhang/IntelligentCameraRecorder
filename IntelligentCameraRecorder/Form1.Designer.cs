@@ -1,4 +1,6 @@
 ﻿
+using System.Windows.Forms;
+
 namespace IntelligentCameraRecorder
 {
     partial class Form1
@@ -19,6 +21,16 @@ namespace IntelligentCameraRecorder
                 components.Dispose();
             }
             base.Dispose(disposing);
+        }
+        private void frmMain_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            
+            if (MessageBox.Show("你确定要退出？", "系统提示", MessageBoxButtons.YesNo, MessageBoxIcon.Information, MessageBoxDefaultButton.Button1) == DialogResult.Yes)
+                e.Cancel = false;
+            else
+                e.Cancel = true;
+            if(false == e.Cancel)
+                csvHelper.close();
         }
 
         #region Windows Form Designer generated code
@@ -191,9 +203,10 @@ namespace IntelligentCameraRecorder
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
             this.Text = "IntelligentCameraRecorder";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
-
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.frmMain_FormClosing);
         }
 
         #endregion
