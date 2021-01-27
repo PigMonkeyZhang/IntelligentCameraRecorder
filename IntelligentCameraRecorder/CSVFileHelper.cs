@@ -19,16 +19,37 @@ namespace IntelligentCameraRecorder
         private CCDInfo[] ccdList = null;
         private int ccdnum;
         private int lineCounter = 0;//当前写入的行数
+        private string currentParameterFileName = "cameralogger.ini";
+        public void updateParameterFileName(string newFileName)
+        {
+            currentParameterFileName = newFileName;
+            //下面要更新所有参数，谢谢
+            //1. 刷新默认文件的参数
+            Utility.SetValue("system", "currentParameterFilePath", currentParameterFileName, "cameralogger.ini");
+            //2. 关闭当前csv文件
+            close();
 
+            //3. 重新打开新的csv文件
+            openAndWriteHeads();
+        }
+        
+        
+        public string getParameterFileName()
+        {
+            return currentParameterFileName;
+        }
+        
         public CSVFileHelper(string fPath)
         {
             filePath = fPath;
+            currentParameterFileName = Utility.GetValue("system", "currentParameterFilePath", "cameralogger.ini", "cameralogger.ini");
             openAndWriteHeads();
         }
         private void openAndWriteHeads()
         {
             bool isAppend = false;
-            string fileName = DateTime.Now.ToString("yyyy-MM-dd-HH");
+            string sFilePre = Utility.GetValue("system", "currentMaterialName", "bupi1", currentParameterFileName);
+            string fileName = sFilePre+"-"+DateTime.Now.ToString("yyyy-MM-dd-HH");
             if (fileName.Equals(currtFileName))
             {
                 //当前文件存在，那么以追加方式打开。
@@ -56,14 +77,14 @@ namespace IntelligentCameraRecorder
             sw = new StreamWriter(fs, System.Text.Encoding.UTF8);
 
             //get heads from parameter file
-            ccdnum = int.Parse(Utility.GetValue("camera", "ccdnum", "2"));
+            ccdnum = int.Parse(Utility.GetValue("camera", "ccdnum", "2",currentParameterFileName));
             ccdList = new CCDInfo[ccdnum];
             string dataLine = "order,time,";
             for (int i = 0; i < ccdnum; i++)
             {
                 ccdList[i] = new CCDInfo();
                 ccdList[i].ccd_name = "ccd" + (i + 1);
-                ccdList[i].columns_names = Utility.GetValue("camera", ccdList[i].ccd_name, null);
+                ccdList[i].columns_names = Utility.GetValue("camera", ccdList[i].ccd_name, null,currentParameterFileName);
                 if (null != ccdList[i].columns_names)
                 {
                     dataLine += ccdList[i].columns_names;

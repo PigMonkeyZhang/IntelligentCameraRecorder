@@ -115,15 +115,24 @@ namespace IntelligentCameraRecorder
         {
             InitializeComponent();
             //创建套接字，ipv4寻址方式，套接字类型，传输协议
-            
+
             //添加串口项目
             foreach (string s in System.IO.Ports.SerialPort.GetPortNames())
             {//获取有多少个COM口
                 //System.Diagnostics.Debug.WriteLine(s);
                 this.comboBox1.Items.Add(s);
             }
-            comboBox1.SelectedItem = Utility.GetValue("com", "portname", "COM3");
-            //comboBox1.SelectedIndex = 1;
+            List<string> sList = Utility.getFileNameList(Environment.CurrentDirectory, ".ini");
+            foreach(string s in sList)
+            {
+                this.comboBox2.Items.Add(s);
+            }
+            
+            //打开csv文件准备写
+            csvHelper = new CSVFileHelper(Environment.CurrentDirectory);
+            comboBox1.SelectedItem = Utility.GetValue("com", "portname", "COM3", csvHelper.getParameterFileName());
+           // comboBox2.SelectedItem = csvHelper.getParameterFileName();
+            comboBox2.SelectedItem = Utility.GetValue("system", "currentParameterFilePath", "cameraLogger.ini", csvHelper.getParameterFileName());
             ComDevice = new SerialPort();
             ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//绑定事件
 
@@ -171,6 +180,7 @@ namespace IntelligentCameraRecorder
 
         private void button1_Click(object sender, EventArgs e)
         {
+            //chose output file path
             FolderBrowserDialog folderBrowser = new FolderBrowserDialog();
             folderBrowser.Description = "请选择需要的目录";
             //folderBrowser.ShowNewFolderButton = true;
@@ -196,13 +206,16 @@ namespace IntelligentCameraRecorder
 
         private void button2_Click(object sender, EventArgs e)
         {
+            //connect buttong
+            /* don't need it now 
             if (csvHelper == null)
                 csvHelper = new CSVFileHelper(Environment.CurrentDirectory);
             else
                 csvHelper.flushCSV();
+            */
             // this.label1.Text = "wugui";
-            socketip = Utility.GetValue("socket", "ip", "127.0.0.1");
-            port = int.Parse(Utility.GetValue("socket", "port", "1231"));
+            socketip = Utility.GetValue("socket", "ip", "127.0.0.1", csvHelper.getParameterFileName());
+            port = int.Parse(Utility.GetValue("socket", "port", "1231", csvHelper.getParameterFileName()));
             // connect socket here
             connectSocket(socketip, port);
             // connect serial port here
@@ -219,7 +232,7 @@ namespace IntelligentCameraRecorder
             if (ComDevice.IsOpen == false)
             {
                 ComDevice.PortName = comboBox1.SelectedItem.ToString();
-                ComDevice.BaudRate = int.Parse(Utility.GetValue("com","baudrate","9600"));
+                ComDevice.BaudRate = int.Parse(Utility.GetValue("com","baudrate","9600", csvHelper.getParameterFileName()));
                 ComDevice.Parity = (Parity)0;
                 ComDevice.DataBits = 8;
                 ComDevice.StopBits = (StopBits)1;
@@ -271,7 +284,7 @@ namespace IntelligentCameraRecorder
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Utility.SetValue("com", "portname", comboBox1.SelectedItem.ToString());
+            Utility.SetValue("com", "portname", comboBox1.SelectedItem.ToString(), csvHelper.getParameterFileName());
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -282,6 +295,12 @@ namespace IntelligentCameraRecorder
             disConnectSocket();
             //disconnect serial port
             closeSerialPort();
+        }
+
+        private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (null != csvHelper)
+                csvHelper.updateParameterFileName(comboBox2.SelectedItem.ToString());
         }
     }
 }
