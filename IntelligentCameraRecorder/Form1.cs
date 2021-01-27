@@ -15,7 +15,7 @@ namespace IntelligentCameraRecorder
 {
     public partial class Form1 : Form
     {
-        private Socket ClientSocket;
+        private Socket clientSocket;
         private SerialPort ComDevice;
         private Boolean isConnected = false;
         private Boolean isComConnected = false;
@@ -25,18 +25,20 @@ namespace IntelligentCameraRecorder
         private string socketip;
         private CSVFileHelper csvHelper=null;
         private string outputPath = Environment.CurrentDirectory;
+        private Thread ThreadReceive;
 
 
-        public void Connect(string IP, Int32 Port)
+        private void connectSocket(string IP, Int32 Port)
         {
             if (isConnected)
                 return;
+            clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             try
             {
-                ClientSocket.Connect(IP, Port);//连接到指定服务器
+                clientSocket.Connect(IP, Port);//连接到指定服务器
                 Console.WriteLine("connect server succeed ok!");//提示信息
                 //收到消息是线程会被挂起，创建新线程处理收到的消息
-                Thread ThreadReceive = new Thread(Receive);
+                ThreadReceive = new Thread(Receive);
                 ThreadReceive.IsBackground = true;
                 ThreadReceive.Start();
                 isConnected = true;
@@ -47,13 +49,30 @@ namespace IntelligentCameraRecorder
             }
         }
 
+        private void disConnectSocket()
+        {
+            if (!isConnected)
+                return;
+            try
+            { 
+               
+                ThreadReceive.Abort();
+                clientSocket.Close();
+                isConnected = false;
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("无法终止线程{0}", e);
+            }
+        }
+
         /// <summary>
         /// 发送消息
         /// </summary>
         /// <param name="msg"></param>
         public void Send(string msg)
         {
-            ClientSocket.Send(Encoding.UTF8.GetBytes(msg));
+            clientSocket.Send(Encoding.UTF8.GetBytes(msg));
         }
 
         /// <summary>
@@ -64,7 +83,7 @@ namespace IntelligentCameraRecorder
             try
             {
                 byte[] ByteReceive = new byte[1024];
-                int ReceiveLenght = ClientSocket.Receive(ByteReceive);//此处线程会被挂起
+                int ReceiveLenght = clientSocket.Receive(ByteReceive);//此处线程会被挂起
                 string strGet = Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght);
                 Console.WriteLine("{0}", strGet);
                 System.Diagnostics.Debug.WriteLine("信息:{0}", strGet);
@@ -96,7 +115,7 @@ namespace IntelligentCameraRecorder
         {
             InitializeComponent();
             //创建套接字，ipv4寻址方式，套接字类型，传输协议
-            ClientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            
             //添加串口项目
             foreach (string s in System.IO.Ports.SerialPort.GetPortNames())
             {//获取有多少个COM口
@@ -185,7 +204,7 @@ namespace IntelligentCameraRecorder
             socketip = Utility.GetValue("socket", "ip", "127.0.0.1");
             port = int.Parse(Utility.GetValue("socket", "port", "1231"));
             // connect socket here
-            Connect(socketip, port);
+            connectSocket(socketip, port);
             // connect serial port here
             openSerialPort();
         }
@@ -219,6 +238,31 @@ namespace IntelligentCameraRecorder
             }            
         }
 
+        private void closeSerialPort()
+        {
+            if (comboBox1.Items.Count <= 0)
+            {
+                MessageBox.Show("没有发现串口,请检查线路！");
+                return;
+            }
+            if (!isComConnected) return;
+            if (ComDevice.IsOpen == true)
+            {
+                try
+                {
+                    ComDevice.Close();
+                    isComConnected = false;
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+            }
+        }
+
         private void button3_Click(object sender, EventArgs e)
         {
             textBox2.Clear();
@@ -234,6 +278,10 @@ namespace IntelligentCameraRecorder
         {
             if (null != csvHelper)
                 csvHelper.close();
+            //disconnect socket
+            disConnectSocket();
+            //disconnect serial port
+            closeSerialPort();
         }
     }
 }
