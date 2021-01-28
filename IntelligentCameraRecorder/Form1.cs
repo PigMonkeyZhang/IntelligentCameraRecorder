@@ -54,11 +54,11 @@ namespace IntelligentCameraRecorder
             if (!isConnected)
                 return;
             try
-            { 
-               
+            {
+                isConnected = false;
                 ThreadReceive.Abort();
                 clientSocket.Close();
-                isConnected = false;
+                
             }
             catch (SocketException e)
             {
@@ -80,33 +80,35 @@ namespace IntelligentCameraRecorder
         /// </summary>
         private void Receive()
         {
-            try
+            while (isConnected)
             {
-                byte[] ByteReceive = new byte[1024];
-                int ReceiveLenght = clientSocket.Receive(ByteReceive);//此处线程会被挂起
-                string strGet = Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght);
-                Console.WriteLine("{0}", strGet);
-                System.Diagnostics.Debug.WriteLine("信息:{0}", strGet);
-                csvHelper.updateCCDValue(strGet);
-                //////////////////////////////
-                //线程委托去刷新信息
-                Action<String> AsyncUIDelegate = delegate (string n)
+                try
                 {
-                    if (showLinesSocket++ > 50)
+                    byte[] ByteReceive = new byte[1024];
+                    int ReceiveLenght = clientSocket.Receive(ByteReceive);//此处线程会被挂起
+                    string strGet = Encoding.UTF8.GetString(ByteReceive, 0, ReceiveLenght);
+                    Console.WriteLine("{0}", strGet);
+                    System.Diagnostics.Debug.WriteLine("信息:{0}", strGet);
+                    csvHelper.updateCCDValue(strGet);
+                    //////////////////////////////
+                    //线程委托去刷新信息
+                    Action<String> AsyncUIDelegate = delegate (string n)
                     {
-                        showLinesSocket = 0;
-                        textBox2.Clear();
-                    }
-                    textBox2.AppendText(n);
-                    textBox2.AppendText(System.Environment.NewLine);
-                };
-                textBox2.Invoke(AsyncUIDelegate, new object[] { strGet });
-                //////////////////////////////
-                Receive();
-            }
-            catch
-            {
-                Console.WriteLine("服务器已断开");
+                        if (showLinesSocket++ > 50)
+                        {
+                            showLinesSocket = 0;
+                            textBox2.Clear();
+                        }
+                        textBox2.AppendText(n);
+                        textBox2.AppendText(System.Environment.NewLine);
+                    };
+                    textBox2.Invoke(AsyncUIDelegate, new object[] { strGet });
+                    //////////////////////////////
+                }
+                catch
+                {
+                    Console.WriteLine("服务器已断开");
+                }
             }
         }
 

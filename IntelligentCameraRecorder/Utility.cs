@@ -40,6 +40,17 @@ namespace IntelligentCameraRecorder
             return sb.ToString();
 
         }
+
+        public static bool csvStringMatched(string source, string key)
+        {
+            string[] sL = source.Split(',');
+            foreach(string s in sL)
+            {
+                if (s.Equals(key))
+                    return true;
+            }
+            return false;
+        }
         ///
         public static List<string> getFileNameList(string path, string extName)
         {

@@ -131,10 +131,7 @@ namespace IntelligentCameraRecorder
         }
         public void updateALine()
         {
-            //判断当前时间是否需要更新文件名
-            string fileName = DateTime.Now.ToString("yyyy-MM-dd-HH");
-            if (!fileName.Equals(currtFileName))
-                flushCSV();
+            
 
             string dL = "";
             dL += lineCounter++ ;
@@ -151,6 +148,13 @@ namespace IntelligentCameraRecorder
             }
             if (null != sw)
                 sw.WriteLine(dL);
+
+            //判断当前时间是否需要更新文件名
+            string sFilePre = Utility.GetValue("system", "currentMaterialName", "bupi1", currentParameterFileName);
+            string fileName = sFilePre + "-" + DateTime.Now.ToString("yyyy-MM-dd-HH");
+
+            if (!fileName.Equals(currtFileName))
+                flushCSV(); //这里有问题，flush之后ccdList.columevalues 立马变null了，更新下一行的values全成了null，所以必须把这个逻辑放到最后去
 
         }
 
@@ -195,7 +199,7 @@ namespace IntelligentCameraRecorder
             //1. 找到values 锁定的的ccd
             for(i = 0; i< ccdList.Length; i++)
             {
-                if (values.Contains(ccdList[i].ccd_name))
+                if (Utility.csvStringMatched(values, ccdList[i].ccd_name))
                 {
                     isMatched = true;
                     break;
