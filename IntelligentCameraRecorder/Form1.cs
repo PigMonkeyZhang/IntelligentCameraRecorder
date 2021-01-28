@@ -25,7 +25,7 @@ namespace IntelligentCameraRecorder
         private string socketip;
         private CSVFileHelper csvHelper=null;
         private string outputPath = Environment.CurrentDirectory;
-        private Thread ThreadReceive;
+        private Thread ThreadReceive,ComThreadReceive;
 
 
         private void connectSocket(string IP, Int32 Port)
@@ -112,7 +112,42 @@ namespace IntelligentCameraRecorder
             }
         }
 
-     
+        /// <summary>
+        /// 接收消息
+        /// </summary>
+        private void ComReceive()
+        {
+            while (isComConnected)
+            {
+                try
+                {
+                    // byte[] ByteReceive = new byte[1024];
+                    string strGet = ComDevice.ReadLine();
+                    Console.WriteLine("{0}", strGet);
+                    System.Diagnostics.Debug.WriteLine("信息:{0}", strGet);
+                    csvHelper.updateCCDValue(strGet);
+                    //////////////////////////////
+                    //线程委托去刷新信息
+                    Action<String> AsyncUIDelegate = delegate (string n)
+                    {
+                        if (showLinesSocket++ > 50)
+                        {
+                            showLinesSocket = 0;
+                            textBox2.Clear();
+                        }
+                        textBox3.AppendText(n);
+                        textBox3.AppendText(System.Environment.NewLine);
+                    };
+                    textBox3.Invoke(AsyncUIDelegate, new object[] { strGet });
+                    //////////////////////////////
+                }
+                catch
+                {
+                    Console.WriteLine("串口已断开");
+                }
+            }
+        }
+
         public Form1()
         {
             InitializeComponent();
@@ -136,7 +171,7 @@ namespace IntelligentCameraRecorder
            // comboBox2.SelectedItem = csvHelper.getParameterFileName();
             comboBox2.SelectedItem = Utility.GetValue("system", "currentParameterFilePath", "cameraLogger.ini", csvHelper.getParameterFileName());
             ComDevice = new SerialPort();
-            ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//绑定事件
+           // ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//这个该死的事件害我错乱
 
             //init current output path as current path
             textBox1.Text = Environment.CurrentDirectory;
@@ -148,7 +183,7 @@ namespace IntelligentCameraRecorder
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Com_DataReceived(object sender, SerialDataReceivedEventArgs e)
+       /* private void Com_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             if (ComDevice.IsOpen)
             {
@@ -163,14 +198,17 @@ namespace IntelligentCameraRecorder
             }
 
         }
+        */
+       /*
         private void ProcessData(byte[] data)
         {
             //在这里处理数据吧
             string strGet = new UTF8Encoding().GetString(data);
             csvHelper.updateCCDValue(strGet);
+            System.Diagnostics.Debug.WriteLine("串口:{1}", strGet);
             this.BeginInvoke(new MethodInvoker(delegate
             {
-                // textBox3.AppendText("\r\n");
+                textBox3.AppendText("\r\n");
                 if (showLinesCom++ > 50)
                 {
                     showLinesCom = 0;
@@ -179,7 +217,7 @@ namespace IntelligentCameraRecorder
                 textBox3.AppendText(strGet);
             }));
         }
-
+        */
         private void button1_Click(object sender, EventArgs e)
         {
             //chose output file path
@@ -242,7 +280,10 @@ namespace IntelligentCameraRecorder
                 {
                     ComDevice.Open();
                     isComConnected = true;
-                   
+                    //收到消息是线程会被挂起，创建新线程处理收到的消息
+                    ComThreadReceive = new Thread(ComReceive);
+                    ComThreadReceive.IsBackground = true;
+                    ComThreadReceive.Start();
                 }
                 catch (Exception ex)
                 {
