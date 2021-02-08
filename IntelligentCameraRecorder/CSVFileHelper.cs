@@ -20,6 +20,7 @@ namespace IntelligentCameraRecorder
         private int ccdnum;
         private int lineCounter = 0;//当前写入的行数
         private string currentParameterFileName = "cameralogger.ini";
+        private bool isLineDirty = false;
         public void updateParameterFileName(string newFileName)
         {
             currentParameterFileName = newFileName;
@@ -131,8 +132,9 @@ namespace IntelligentCameraRecorder
         }
         public void updateALine()
         {
-            
 
+            if (!isLineDirty)
+                return;
             string dL = "";
             dL += lineCounter++ ;
             dL += ",";
@@ -155,11 +157,13 @@ namespace IntelligentCameraRecorder
 
             if (!fileName.Equals(currtFileName))
                 flushCSV(); //这里有问题，flush之后ccdList.columevalues 立马变null了，更新下一行的values全成了null，所以必须把这个逻辑放到最后去
+            isLineDirty = false;
 
         }
 
         public void close()
         {
+            updateALine();
             //close current csv
             if (null != sw)
                 sw.Close();
@@ -228,8 +232,9 @@ namespace IntelligentCameraRecorder
             //最后无论如何都要更新这个ccd数据的对吧。
             ccdList[i].isDirty = true;
             ccdList[i].columns_values = values;
-            
-               
+            isLineDirty = true;
+
+
         }
         /// <summary>
         /// 将DataTable中数据写入到CSV文件中

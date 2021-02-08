@@ -118,7 +118,7 @@ namespace IntelligentCameraRecorder
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(423, 57);
+            this.button3.Location = new System.Drawing.Point(330, 57);
             this.button3.Name = "button3";
             this.button3.Size = new System.Drawing.Size(75, 23);
             this.button3.TabIndex = 8;
@@ -128,11 +128,11 @@ namespace IntelligentCameraRecorder
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(342, 57);
+            this.button4.Location = new System.Drawing.Point(403, 57);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(75, 23);
+            this.button4.Size = new System.Drawing.Size(85, 23);
             this.button4.TabIndex = 9;
-            this.button4.Text = "停止";
+            this.button4.Text = "停止退出";
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
@@ -203,10 +203,11 @@ namespace IntelligentCameraRecorder
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.Name = "Form1";
             this.Text = "IntelligentCameraRecorder";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.frmMain_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.frmMain_FormClosing);
+
         }
 
         #endregion

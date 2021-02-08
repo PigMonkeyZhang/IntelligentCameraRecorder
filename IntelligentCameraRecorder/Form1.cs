@@ -20,7 +20,6 @@ namespace IntelligentCameraRecorder
         private Boolean isConnected = false;
         private Boolean isComConnected = false;
         private int showLinesSocket = 0;
-        private int showLinesCom = 0;
         private int port;
         private string socketip;
         private CSVFileHelper csvHelper=null;
@@ -98,6 +97,7 @@ namespace IntelligentCameraRecorder
                         {
                             showLinesSocket = 0;
                             textBox2.Clear();
+                            textBox3.Clear();
                         }
                         textBox2.AppendText(n);
                         textBox2.AppendText(System.Environment.NewLine);
@@ -133,6 +133,7 @@ namespace IntelligentCameraRecorder
                         if (showLinesSocket++ > 50)
                         {
                             showLinesSocket = 0;
+                            textBox3.Clear();
                             textBox2.Clear();
                         }
                         textBox3.AppendText(n);
@@ -338,6 +339,7 @@ namespace IntelligentCameraRecorder
             disConnectSocket();
             //disconnect serial port
             closeSerialPort();
+            System.Environment.Exit(0);
         }
 
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
