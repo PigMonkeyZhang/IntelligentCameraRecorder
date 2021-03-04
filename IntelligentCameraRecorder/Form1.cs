@@ -172,10 +172,17 @@ namespace IntelligentCameraRecorder
            // comboBox2.SelectedItem = csvHelper.getParameterFileName();
             comboBox2.SelectedItem = Utility.GetValue("system", "currentParameterFilePath", "cameraLogger.ini", csvHelper.getParameterFileName());
             ComDevice = new SerialPort();
-           // ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//这个该死的事件害我错乱
+            // ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//这个该死的事件害我错乱
 
             //init current output path as current path
-            textBox1.Text = Environment.CurrentDirectory;
+            //currentOutputFilePath
+            textBox1.Text = Utility.GetValue("system", "currentOutputFilePath", "wrong", csvHelper.getParameterFileName());
+            if (textBox1.Text.Equals("wrong"))
+            {
+                textBox1.Text = Environment.CurrentDirectory;
+                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, csvHelper.getParameterFileName());
+            }
+                
 
         }
 
@@ -236,7 +243,7 @@ namespace IntelligentCameraRecorder
                     csvHelper.filePath = outputPath;
                     csvHelper.flushCSV();
                 }
-                    
+                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, csvHelper.getParameterFileName());
             }
         }
 
