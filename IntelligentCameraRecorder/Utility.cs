@@ -25,16 +25,16 @@ namespace IntelligentCameraRecorder
         [DllImport("kernel32")]
         private static extern long WritePrivateProfileString(string section, string key, string val, string filePath);
 
-        public static void SetValue(string section, string key, string value,string fPath)
+        public static void SetValue(string section, string key, string value, string fPath)
         {
             string strPath = Environment.CurrentDirectory + "\\" + fPath;
             WritePrivateProfileString(section, key, value, strPath);
         }
 
-        public static string GetValue(string section, string key, string defaultVal,string fPath)
+        public static string GetValue(string section, string key, string defaultVal, string fPath)
         {
             StringBuilder sb = new StringBuilder(255);
-            string strPath = Environment.CurrentDirectory +"\\"+ fPath;
+            string strPath = Environment.CurrentDirectory + "\\" + fPath;
             //最好初始缺省值设置为非空，因为如果配置文件不存在，取不到值，程序也不会报错
             GetPrivateProfileString(section, key, defaultVal, sb, 255, strPath);
             return sb.ToString();
@@ -44,12 +44,20 @@ namespace IntelligentCameraRecorder
         public static bool csvStringMatched(string source, string key)
         {
             string[] sL = source.Split(',');
-            foreach(string s in sL)
+            foreach (string s in sL)
             {
                 if (s.Equals(key))
                     return true;
             }
             return false;
+        }
+        public static string getParameterFileName()
+        {
+            return Utility.GetValue("system", "currentParameterFilePath", "cameralogger.ini", "cameralogger.ini");
+        }
+        public static void updateParameterFileName(string newFileName)
+        {
+            Utility.SetValue("system", "currentParameterFilePath", newFileName, "cameralogger.ini");           
         }
         ///
         public static List<string> getFileNameList(string path, string extName)

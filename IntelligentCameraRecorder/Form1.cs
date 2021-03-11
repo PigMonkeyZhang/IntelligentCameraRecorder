@@ -23,8 +23,9 @@ namespace IntelligentCameraRecorder
         private int port;
         private string socketip;
         private CSVFileHelper csvHelper=null;
-        private string outputPath = Environment.CurrentDirectory;
+       // private string outputPath = Environment.CurrentDirectory;
         private Thread ThreadReceive,ComThreadReceive;
+        private bool isStarted = false;
 
 
         private void connectSocket(string IP, Int32 Port)
@@ -148,7 +149,7 @@ namespace IntelligentCameraRecorder
                 }
             }
         }
-
+        
         public Form1()
         {
             InitializeComponent();
@@ -166,21 +167,20 @@ namespace IntelligentCameraRecorder
                 this.comboBox2.Items.Add(s);
             }
             
-            //打开csv文件准备写
-            csvHelper = new CSVFileHelper(Environment.CurrentDirectory);
-            comboBox1.SelectedItem = Utility.GetValue("com", "portname", "COM3", csvHelper.getParameterFileName());
+            
+            comboBox1.SelectedItem = Utility.GetValue("com", "portname", "COM3", Utility.getParameterFileName());
            // comboBox2.SelectedItem = csvHelper.getParameterFileName();
-            comboBox2.SelectedItem = Utility.GetValue("system", "currentParameterFilePath", "cameraLogger.ini", csvHelper.getParameterFileName());
+            comboBox2.SelectedItem = Utility.GetValue("system", "currentParameterFilePath", "cameraLogger.ini", Utility.getParameterFileName());
             ComDevice = new SerialPort();
             // ComDevice.DataReceived += new SerialDataReceivedEventHandler(Com_DataReceived);//这个该死的事件害我错乱
 
             //init current output path as current path
             //currentOutputFilePath
-            textBox1.Text = Utility.GetValue("system", "currentOutputFilePath", "wrong", csvHelper.getParameterFileName());
+            textBox1.Text = Utility.GetValue("system", "currentOutputFilePath", "wrong", Utility.getParameterFileName());
             if (textBox1.Text.Equals("wrong"))
             {
                 textBox1.Text = Environment.CurrentDirectory;
-                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, csvHelper.getParameterFileName());
+                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, Utility.getParameterFileName());
             }
                 
 
@@ -235,15 +235,16 @@ namespace IntelligentCameraRecorder
             if (folderBrowser.ShowDialog() == DialogResult.OK)
             {
                 this.textBox1.Text = folderBrowser.SelectedPath;
-                outputPath = folderBrowser.SelectedPath;
+              //  outputPath = folderBrowser.SelectedPath;
+                /*
                 if(null == csvHelper)
                     csvHelper = new CSVFileHelper(folderBrowser.SelectedPath);
                 else
                 {
                     csvHelper.filePath = outputPath;
                     csvHelper.flushCSV();
-                }
-                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, csvHelper.getParameterFileName());
+                */
+                Utility.SetValue("system", "currentOutputFilePath", textBox1.Text, Utility.getParameterFileName());
             }
         }
 
@@ -262,12 +263,42 @@ namespace IntelligentCameraRecorder
                 csvHelper.flushCSV();
             */
             // this.label1.Text = "wugui";
-            socketip = Utility.GetValue("socket", "ip", "127.0.0.1", csvHelper.getParameterFileName());
-            port = int.Parse(Utility.GetValue("socket", "port", "1231", csvHelper.getParameterFileName()));
-            // connect socket here
-            connectSocket(socketip, port);
-            // connect serial port here
-            openSerialPort();
+            //打开csv文件准备写,移入开始中去吧.
+            if (!isStarted)
+            {//当前属于关闭状态，切换成开始状态.
+                button2.Text = "停止";
+                isStarted = true;
+                //开始状态时UI上有些选项不可选
+                button1.Enabled = false;
+                comboBox1.Enabled = false;
+                comboBox2.Enabled = false;
+                if (null == csvHelper)
+                    csvHelper = new CSVFileHelper(Environment.CurrentDirectory);
+                socketip = Utility.GetValue("socket", "ip", "127.0.0.1", Utility.getParameterFileName());
+                port = int.Parse(Utility.GetValue("socket", "port", "1231", Utility.getParameterFileName()));
+                // connect socket here
+                connectSocket(socketip, port);
+                // connect serial port here
+                openSerialPort();
+            }
+            else
+            {
+                //当前属于开始状态，切换成停止状态.
+                button2.Text = "开始";
+                //停止状态时UI上有些选项可选
+                button1.Enabled = true;
+                comboBox1.Enabled = true;
+                comboBox2.Enabled = true;
+                isStarted = false;
+                if (null != csvHelper)
+                    csvHelper.close();
+                csvHelper = null;
+                //disconnect socket
+                disConnectSocket();
+                //disconnect serial port
+                closeSerialPort();
+            }
+            
         }
         private void openSerialPort()
         {
@@ -280,7 +311,7 @@ namespace IntelligentCameraRecorder
             if (ComDevice.IsOpen == false)
             {
                 ComDevice.PortName = comboBox1.SelectedItem.ToString();
-                ComDevice.BaudRate = int.Parse(Utility.GetValue("com","baudrate","9600", csvHelper.getParameterFileName()));
+                ComDevice.BaudRate = int.Parse(Utility.GetValue("com","baudrate","9600", Utility.getParameterFileName()));
                 ComDevice.Parity = (Parity)0;
                 ComDevice.DataBits = 8;
                 ComDevice.StopBits = (StopBits)1;
@@ -335,24 +366,21 @@ namespace IntelligentCameraRecorder
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Utility.SetValue("com", "portname", comboBox1.SelectedItem.ToString(), csvHelper.getParameterFileName());
+            Utility.SetValue("com", "portname", comboBox1.SelectedItem.ToString(), Utility.getParameterFileName());
         }
 
         private void button4_Click(object sender, EventArgs e)
         {
-            if (null != csvHelper)
-                csvHelper.close();
-            //disconnect socket
-            disConnectSocket();
-            //disconnect serial port
-            closeSerialPort();
+            
             System.Environment.Exit(0);
         }
 
         private void comboBox2_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (null != csvHelper)
-                csvHelper.updateParameterFileName(comboBox2.SelectedItem.ToString());
+            //这里更新参数文件就好，不要做动作。
+            Utility.updateParameterFileName(comboBox2.SelectedItem.ToString());
+            //if (null != csvHelper)
+             //   csvHelper.updateParameterFileName(comboBox2.SelectedItem.ToString());
         }
 
         private void Form1_Load(object sender, EventArgs e)

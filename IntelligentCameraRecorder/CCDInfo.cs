@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace IntelligentCameraRecorder
 {
@@ -10,8 +11,19 @@ namespace IntelligentCameraRecorder
     {
         public string ccd_name;
         public string columns_names;
-        public string columns_values;
-        public bool isDirty = false;
+        private Queue ccdVaulesQueue;
+        private bool isDirty ;
+        public int getValuesQueueLength()
+        {
+            if(ccdVaulesQueue!=null)
+                return ccdVaulesQueue.Count;
+            return 0;
+        }
+        public CCDInfo()
+        {
+            isDirty = false;
+            ccdVaulesQueue = new Queue();
+        }
         public Boolean isThisCCD(string ccdn)
         {
             return ccd_name.Equals(ccdn);
@@ -19,13 +31,17 @@ namespace IntelligentCameraRecorder
         public void pushValues(string vals)
         {
             isDirty = true;
-            columns_values = vals;
+            ccdVaulesQueue.Enqueue(vals);
         }
 
         public string popValues()
         {
-            isDirty = false;
-            return columns_values;
+            if (ccdVaulesQueue.Count == 0)
+            {
+                isDirty = false;
+                return "";
+            }
+            return (string)ccdVaulesQueue.Dequeue();
         }
     }
 }

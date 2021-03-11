@@ -11,7 +11,7 @@ namespace IntelligentCameraRecorder
 {
     class CSVFileHelper
     {
-        public string filePath;
+        private string filePath;
         private string currtFileName = "";
         private string fullFileName;
         private FileStream fs;
@@ -20,8 +20,10 @@ namespace IntelligentCameraRecorder
         private int ccdnum;
         private int lineCounter = 0;//当前写入的行数
         private string currentParameterFileName = "cameralogger.ini";
-        private bool isLineDirty = false;
-        public void updateParameterFileName(string newFileName)
+        //teddy: pipeLine 中不需要判断行脏位，private bool isLineDirty = false;
+        private int pipeLines;
+        
+        /*public void updateParameterFileName(string newFileName)
         {
             currentParameterFileName = newFileName;
             //下面要更新所有参数，谢谢
@@ -33,17 +35,20 @@ namespace IntelligentCameraRecorder
             //3. 重新打开新的csv文件
             openAndWriteHeads();
         }
+        */
         
         
-        public string getParameterFileName()
+        
+        /*public string getParameterFileName()
         {
             return currentParameterFileName;
-        }
+        }*/
         
         public CSVFileHelper(string fPath)
         {
             filePath = fPath;
             currentParameterFileName = Utility.GetValue("system", "currentParameterFilePath", "cameralogger.ini", "cameralogger.ini");
+            pipeLines = int.Parse(Utility.GetValue("system", "pipeLines", "0", currentParameterFileName));
             openAndWriteHeads();
         }
         private void openAndWriteHeads()
@@ -99,7 +104,7 @@ namespace IntelligentCameraRecorder
             //set heads here
             sw.WriteLine(dataLine);
         }
-        public void flushCSV()
+        private void flushCSV()
         {
             //close current csv
             if (null != sw)
@@ -113,6 +118,7 @@ namespace IntelligentCameraRecorder
             openAndWriteHeads();
         }
 
+        //2.0中这个不再需要
         private void initCCDValues(CCDInfo ccdI)
         {
             if (null == ccdI )
@@ -127,14 +133,14 @@ namespace IntelligentCameraRecorder
                 if (i < strL.Length - 1)
                     vals += ",";
             }
-            ccdI.columns_values = vals;
-            ccdI.isDirty = false;
+            ccdI.pushValues(vals);
+            //ccdI.isDirty = false;
         }
         public void updateALine()
         {
-
-            if (!isLineDirty)
-                return;
+            //2.0 中更新一行的依据是pipeline满溢，这个在外部逻辑判断，内部不再重复判断。
+           // if (!isLineDirty)
+             //   return;
             string dL = "";
             dL += lineCounter++ ;
             dL += ",";
@@ -142,9 +148,9 @@ namespace IntelligentCameraRecorder
             dL += ",";
             for (int i = 0; i < ccdList.Length; i++)
             {
-                dL += ccdList[i].columns_values;
-                initCCDValues(ccdList[i]);
-                ccdList[i].isDirty = false;
+                dL += ccdList[i].popValues();
+               //啥意思？ initCCDValues(ccdList[i]);
+                //ccdList[i].isDirty = false;
                 if (i < ccdList.Length - 1)
                     dL += ",";
             }
@@ -157,13 +163,35 @@ namespace IntelligentCameraRecorder
 
             if (!fileName.Equals(currtFileName))
                 flushCSV(); //这里有问题，flush之后ccdList.columevalues 立马变null了，更新下一行的values全成了null，所以必须把这个逻辑放到最后去
-            isLineDirty = false;
+          //  isLineDirty = false;
 
         }
-
+        private bool isCCDListEmpty()
+        {
+            bool ret = true;
+            for (int i = 0; i < ccdList.Length; i++)
+            {
+                if (ccdList[i].getValuesQueueLength() > 0)
+                {
+                    ret = false;
+                    break;
+                }
+            }
+            return ret;
+        }
+        private void fluchPipeLines()
+        {
+            int pipeLinesCounter = 0; 
+            while (!isCCDListEmpty() && (pipeLinesCounter++<100))// pipelines limited within 100
+            {
+                updateALine();
+            }
+        }
         public void close()
         {
-            updateALine();
+            //2.0 中不再是更新最后一行，而是把队列中所有行全部更新到csv中。
+            //updateALine();
+            fluchPipeLines();
             //close current csv
             if (null != sw)
                 sw.Close();
@@ -221,8 +249,9 @@ namespace IntelligentCameraRecorder
             values = trimHead(values);
             //3. 判断当前ccd是否脏了
             //3.1 如果脏了，就写入一行数据，更新脏位，当前ccd仍旧为脏
+            //3.1.2 如果到达了工作台pipeLines满溢的数据长度了，就代表需要更新一行了。（这个是2.0版本多流水线的逻辑）
             //3.2 如果没脏，更新脏位和数据值
-            if (ccdList[i].isDirty)
+            if (ccdList[i].getValuesQueueLength()>this.pipeLines)
             {
                 //更新一行数据
                 updateALine();
@@ -230,9 +259,9 @@ namespace IntelligentCameraRecorder
             }
 
             //最后无论如何都要更新这个ccd数据的对吧。
-            ccdList[i].isDirty = true;
-            ccdList[i].columns_values = values;
-            isLineDirty = true;
+            //ccdList[i].isDirty = true;
+            ccdList[i].pushValues(values);
+           // isLineDirty = true;
 
 
         }
