@@ -13,6 +13,10 @@ namespace IntelligentCameraRecorder
         public string columns_names;
         private Queue ccdVaulesQueue;
         private bool isDirty ;
+        private int ccdValuesCounter = 0;
+
+        public int CcdValuesCounter { get => ccdValuesCounter; set => ccdValuesCounter = value; }
+
         public int getValuesQueueLength()
         {
             if(ccdVaulesQueue!=null)

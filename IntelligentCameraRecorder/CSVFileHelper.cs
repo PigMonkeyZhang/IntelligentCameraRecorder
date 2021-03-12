@@ -21,8 +21,7 @@ namespace IntelligentCameraRecorder
         private int lineCounter = 0;//当前写入的行数
         private string currentParameterFileName = "cameralogger.ini";
         //teddy: pipeLine 中不需要判断行脏位，private bool isLineDirty = false;
-        private int pipeLines;
-        
+        private WorkSationGroup workStationGroup;
         /*public void updateParameterFileName(string newFileName)
         {
             currentParameterFileName = newFileName;
@@ -48,7 +47,10 @@ namespace IntelligentCameraRecorder
         {
             filePath = fPath;
             currentParameterFileName = Utility.GetValue("system", "currentParameterFilePath", "cameralogger.ini", "cameralogger.ini");
-            pipeLines = int.Parse(Utility.GetValue("system", "pipeLines", "0", currentParameterFileName));
+            //TODO: 获取工位配置
+            workStationGroup = new WorkSationGroup(currentParameterFileName);
+            
+
             openAndWriteHeads();
         }
         private void openAndWriteHeads()
@@ -190,8 +192,8 @@ namespace IntelligentCameraRecorder
         public void close()
         {
             //2.0 中不再是更新最后一行，而是把队列中所有行全部更新到csv中。
-            //updateALine();
-            fluchPipeLines();
+            updateALine();
+            //fluchPipeLines(); 考虑的流水线结束后最后一个退出的工件之前的数据全部是垃圾，所以，不需要全部写回。
             //close current csv
             if (null != sw)
                 sw.Close();
@@ -250,17 +252,33 @@ namespace IntelligentCameraRecorder
             //3. 判断当前ccd是否脏了
             //3.1 如果脏了，就写入一行数据，更新脏位，当前ccd仍旧为脏
             //3.1.2 如果到达了工作台pipeLines满溢的数据长度了，就代表需要更新一行了。（这个是2.0版本多流水线的逻辑）
+            //3.1.3 pipeLines的判断迁移到workstationGroup中，
             //3.2 如果没脏，更新脏位和数据值
-            if (ccdList[i].getValuesQueueLength()>this.pipeLines)
+            if (workStationGroup.IsWorkstationGroupFull)
             {
-                //更新一行数据
-                updateALine();
-               // MessageBox.Show("更新一行的机会来啦");
+                //更新一行数据,只有满流水线和ccd0 来的时候
+                if(0==i)
+                    updateALine();
+                // MessageBox.Show("更新一行的机会来啦");
+            }
+            else
+            {
+
+                
+                //如果workstation不是full状态，说明处于初始状态，需要逐个enable并决定是否push当前收到的相机数据。
+                if (workStationGroup.getWorksationID(ccdList[i].ccd_name) > workStationGroup.CurrentEnabledWorkstationID)
+                    return;
+
+                if (0 == i)
+                    workStationGroup.setEnabledWorksationID(ccdList[0].CcdValuesCounter);
             }
 
             //最后无论如何都要更新这个ccd数据的对吧。
+            //multiWorkstation 逻辑需要判断当前workstation 是否enable了
             //ccdList[i].isDirty = true;
             ccdList[i].pushValues(values);
+            if (ccdList[i].CcdValuesCounter++ > workStationGroup.WorkstationNUM)
+                ccdList[i].CcdValuesCounter = workStationGroup.WorkstationNUM;
            // isLineDirty = true;
 
 
